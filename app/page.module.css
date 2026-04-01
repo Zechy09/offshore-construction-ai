@@ -303,6 +303,31 @@
   line-height: 1.6;
 }
 
+/* ─── Download ─────────────────────────────────────────────── */
+.downloadSection {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 18px 36px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 20px rgba(22,163,74,0.35);
+  letter-spacing: 0.2px;
+}
+.downloadBtn:hover { background: #15803d; }
+.downloadBtn:active { transform: scale(0.98); }
+
 /* ─── Footer ───────────────────────────────────────────────── */
 .footer {
   margin-top: 28px;

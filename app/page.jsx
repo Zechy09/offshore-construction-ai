@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import styles from './page.module.css'
+import { buildDocx } from './lib/buildDocx'
 
 const AGENT_MODES = [
   {
@@ -13,7 +14,7 @@ const AGENT_MODES = [
     id: 'WRITER',
     label: 'Writer',
     icon: '✍️',
-    desc: 'Structured JSON content blocks for one section',
+    desc: 'Generate full section content as a DOCX document',
   },
   {
     id: 'QA',
@@ -68,8 +69,7 @@ export default function Home() {
   const [referenceFile, setReferenceFile] = useState(null)
   const [templateFile, setTemplateFile] = useState(null)
   const [status, setStatus] = useState(null) // { type: 'loading'|'success'|'error', message: string }
-  const [output, setOutput] = useState(null)
-  const [copied, setCopied] = useState(false)
+  const [output, setOutput] = useState(null)   // { blob, filename } for download
   const refFileRef = useRef()
   const tplFileRef = useRef()
 
@@ -92,6 +92,7 @@ export default function Home() {
     setOutput(null)
 
     try {
+      setStatus({ type: 'loading', message: 'Generating content…' })
       const res = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,20 +106,29 @@ export default function Home() {
       })
       if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
 
-      const data = await res.json()
-      setOutput(JSON.stringify(data, null, 2))
-      setStatus({ type: 'success', message: 'Document generated successfully.' })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error || 'AI generation failed')
+
+      setStatus({ type: 'loading', message: 'Building DOCX…' })
+      const blob = await buildDocx(result.data, result.meta)
+      const safeName = (documentType || 'document').replace(/\s+/g, '-').toLowerCase()
+      const filename = `${safeName}-${agentMode.toLowerCase()}-${Date.now()}.docx`
+
+      setOutput({ blob, filename })
+      setStatus({ type: 'success', message: `Document ready — click below to download.` })
     } catch (err) {
       setStatus({ type: 'error', message: `Error: ${err.message}` })
     }
   }
 
-  function copyOutput() {
+  function downloadDocx() {
     if (!output) return
-    navigator.clipboard.writeText(output).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    const url = URL.createObjectURL(output.blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = output.filename
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -287,16 +297,12 @@ export default function Home() {
           </button>
         </form>
 
-        {/* Output */}
+        {/* Download */}
         {output && (
-          <div className={styles.outputSection}>
-            <div className={styles.outputHeader}>
-              <span className={styles.outputTitle}>JSON Output</span>
-              <button className={styles.copyBtn} onClick={copyOutput}>
-                {copied ? '✅ Copied' : '📋 Copy JSON'}
-              </button>
-            </div>
-            <pre className={styles.outputPre}>{output}</pre>
+          <div className={styles.downloadSection}>
+            <button className={styles.downloadBtn} onClick={downloadDocx}>
+              📄 Download {output.filename}
+            </button>
           </div>
         )}
 
