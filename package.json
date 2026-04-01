@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "docx": "^9.6.1",
+    "mammoth": "^1.12.0",
     "next": "14.2.30",
     "react": "^18",
     "react-dom": "^18"

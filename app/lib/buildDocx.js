@@ -180,11 +180,40 @@ function buildSectionDoc(data, meta) {
   return children
 }
 
+// ─── Build REWRITE full procedure doc ────────────────────────
+function buildRewriteDoc(data, meta) {
+  const children = [
+    new Paragraph({
+      children: [new TextRun({ text: data.document_title || meta.documentType || 'Offshore Construction Procedure', bold: true, size: 52, color: NAVY, font: 'Arial' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 },
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `Document Type: ${meta.documentType || ''}   |   Generated: ${new Date(meta.generatedAt).toUTCString()}`, size: 18, color: '94a3b8', font: 'Arial' })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 600 },
+    }),
+  ]
+
+  for (const section of data.sections || []) {
+    children.push(heading(section.title || '', 'heading1'))
+    for (const block of section.content_blocks || []) {
+      children.push(...blockToElements(block))
+    }
+    children.push(new Paragraph({ children: [], spacing: { after: 240 } }))
+  }
+
+  return children
+}
+
 // ─── Main export ─────────────────────────────────────────────
 export async function buildDocx(jsonData, meta) {
-  const isPlanner = meta.agentMode === 'PLANNER' || !!jsonData.sections
+  const isPlanner = meta.agentMode === 'PLANNER' || (!!jsonData.sections && !jsonData.sections[0]?.content_blocks)
+  const isRewrite = meta.agentMode === 'REWRITE' || (!!jsonData.sections && !!jsonData.sections[0]?.content_blocks)
 
-  const children = isPlanner
+  const children = isRewrite
+    ? buildRewriteDoc(jsonData, meta)
+    : isPlanner
     ? buildPlannerDoc(jsonData, meta)
     : buildSectionDoc(jsonData, meta)
 

@@ -5,6 +5,12 @@ import { buildDocx } from './lib/buildDocx'
 
 const AGENT_MODES = [
   {
+    id: 'REWRITE',
+    label: 'Rewrite Procedure',
+    icon: '🔄',
+    desc: 'Upload a template + existing procedure — AI rewrites it into your template',
+  },
+  {
     id: 'PLANNER',
     label: 'Planner',
     icon: '🗂️',
@@ -92,21 +98,36 @@ export default function Home() {
     setOutput(null)
 
     try {
-      setStatus({ type: 'loading', message: 'Generating content…' })
-      const res = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_mode: agentMode,
-          document_type: documentType,
-          scope: scope.trim(),
-          template_rules: templateRules.trim() || 'none',
-          reference_text: referenceText.trim(),
-        }),
-      })
-      if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
+      setStatus({ type: 'loading', message: 'Analysing documents and generating content…' })
 
-      const result = await res.json()
+      let result
+      if (agentMode === 'REWRITE') {
+        if (!referenceFile) throw new Error('Please upload the existing procedure DOCX file.')
+        const form = new FormData()
+        form.append('document_type', documentType)
+        form.append('scope', scope.trim())
+        form.append('template_rules', templateRules.trim() || 'none')
+        form.append('reference_file', referenceFile)
+        if (templateFile) form.append('template_file', templateFile)
+        const res = await fetch('/api/rewrite', { method: 'POST', body: form })
+        if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
+        result = await res.json()
+      } else {
+        const res = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            agent_mode: agentMode,
+            document_type: documentType,
+            scope: scope.trim(),
+            template_rules: templateRules.trim() || 'none',
+            reference_text: referenceText.trim(),
+          }),
+        })
+        if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
+        result = await res.json()
+      }
+
       if (!result.success) throw new Error(result.error || 'AI generation failed')
 
       setStatus({ type: 'loading', message: 'Building DOCX…' })
@@ -115,7 +136,7 @@ export default function Home() {
       const filename = `${safeName}-${agentMode.toLowerCase()}-${Date.now()}.docx`
 
       setOutput({ blob, filename })
-      setStatus({ type: 'success', message: `Document ready — click below to download.` })
+      setStatus({ type: 'success', message: 'Document ready — click below to download.' })
     } catch (err) {
       setStatus({ type: 'error', message: `Error: ${err.message}` })
     }
@@ -218,64 +239,99 @@ export default function Home() {
             />
           </section>
 
-          {/* Reference Document */}
-          <section className={styles.section}>
-            <label className={styles.label}>Reference Document <span className={styles.optional}>(optional)</span></label>
-            <p className={styles.hint}>Upload an existing document for the AI to analyse, extract, and modernise. Or paste extracted text below.</p>
-            <div
-              className={`${styles.uploadZone} ${referenceFile ? styles.uploadZoneActive : ''}`}
-              onClick={() => refFileRef.current.click()}
-            >
-              <span className={styles.uploadIcon}>📄</span>
-              <span className={styles.uploadText}>
-                {referenceFile ? referenceFile.name : 'Click to upload reference document'}
-              </span>
-              <span className={styles.uploadSub}>PDF, DOCX, TXT — max 50MB</span>
-              {referenceFile && (
-                <button
-                  type="button"
-                  className={styles.clearFileBtn}
-                  onClick={e => { e.stopPropagation(); setReferenceFile(null); refFileRef.current.value = '' }}
-                >
-                  ✕ Remove
-                </button>
-              )}
-            </div>
-            <input ref={refFileRef} type="file" accept=".pdf,.docx,.doc,.txt,.md" style={{ display: 'none' }} onChange={handleReferenceFile} />
-            <textarea
-              className={`${styles.textarea} ${styles.textareaSmall}`}
-              rows={4}
-              placeholder='Or paste extracted text from your reference document here…'
-              value={referenceText}
-              onChange={e => setReferenceText(e.target.value)}
-            />
-          </section>
+          {/* Rewrite mode: prominent two-upload layout */}
+          {agentMode === 'REWRITE' && (
+            <section className={styles.section}>
+              <div className={styles.rewriteBanner}>
+                <span className={styles.rewriteBannerIcon}>🔄</span>
+                <div>
+                  <strong>Rewrite Procedure Mode</strong>
+                  <p>Upload your corporate template and the existing procedure. The AI will extract all content from the procedure and rewrite it into your template structure.</p>
+                </div>
+              </div>
+              <div className={styles.rewriteUploads}>
+                <div className={styles.rewriteUploadSlot}>
+                  <label className={styles.label}>Step 1 — Corporate Template <span className={styles.optional}>(optional)</span></label>
+                  <p className={styles.hint}>Your branded DOCX template. Defines section structure and headings.</p>
+                  <div
+                    className={`${styles.uploadZone} ${templateFile ? styles.uploadZoneActive : ''}`}
+                    onClick={() => tplFileRef.current.click()}
+                  >
+                    <span className={styles.uploadIcon}>📝</span>
+                    <span className={styles.uploadText}>{templateFile ? templateFile.name : 'Upload template DOCX'}</span>
+                    <span className={styles.uploadSub}>DOCX only</span>
+                    {templateFile && (
+                      <button type="button" className={styles.clearFileBtn} onClick={e => { e.stopPropagation(); setTemplateFile(null); tplFileRef.current.value = '' }}>✕ Remove</button>
+                    )}
+                  </div>
+                  <input ref={tplFileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleTemplateFile} />
+                </div>
+                <div className={styles.rewriteUploadSlot}>
+                  <label className={styles.label}>Step 2 — Existing Procedure <span className={styles.required}>*required</span></label>
+                  <p className={styles.hint}>The procedure to be rewritten. Full content will be extracted and modernised.</p>
+                  <div
+                    className={`${styles.uploadZone} ${referenceFile ? styles.uploadZoneActive : ''}`}
+                    onClick={() => refFileRef.current.click()}
+                  >
+                    <span className={styles.uploadIcon}>📄</span>
+                    <span className={styles.uploadText}>{referenceFile ? referenceFile.name : 'Upload existing procedure DOCX'}</span>
+                    <span className={styles.uploadSub}>DOCX only</span>
+                    {referenceFile && (
+                      <button type="button" className={styles.clearFileBtn} onClick={e => { e.stopPropagation(); setReferenceFile(null); refFileRef.current.value = '' }}>✕ Remove</button>
+                    )}
+                  </div>
+                  <input ref={refFileRef} type="file" accept=".docx,.doc" style={{ display: 'none' }} onChange={handleReferenceFile} />
+                </div>
+              </div>
+            </section>
+          )}
 
-          {/* Corporate Template File */}
-          <section className={styles.section}>
-            <label className={styles.label}>Corporate DOCX Template <span className={styles.optional}>(optional)</span></label>
-            <p className={styles.hint}>Upload your branded DOCX template file. The AI will map content blocks to its styles.</p>
-            <div
-              className={`${styles.uploadZone} ${templateFile ? styles.uploadZoneActive : ''}`}
-              onClick={() => tplFileRef.current.click()}
-            >
-              <span className={styles.uploadIcon}>📝</span>
-              <span className={styles.uploadText}>
-                {templateFile ? templateFile.name : 'Click to upload DOCX template'}
-              </span>
-              <span className={styles.uploadSub}>DOCX only</span>
-              {templateFile && (
-                <button
-                  type="button"
-                  className={styles.clearFileBtn}
-                  onClick={e => { e.stopPropagation(); setTemplateFile(null); tplFileRef.current.value = '' }}
-                >
-                  ✕ Remove
-                </button>
-              )}
-            </div>
-            <input ref={tplFileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleTemplateFile} />
-          </section>
+          {/* Reference Document — non-REWRITE modes */}
+          {agentMode !== 'REWRITE' && (
+            <section className={styles.section}>
+              <label className={styles.label}>Reference Document <span className={styles.optional}>(optional)</span></label>
+              <p className={styles.hint}>Upload an existing document for the AI to analyse and use as a guide. Or paste extracted text below.</p>
+              <div
+                className={`${styles.uploadZone} ${referenceFile ? styles.uploadZoneActive : ''}`}
+                onClick={() => refFileRef.current.click()}
+              >
+                <span className={styles.uploadIcon}>📄</span>
+                <span className={styles.uploadText}>{referenceFile ? referenceFile.name : 'Click to upload reference document'}</span>
+                <span className={styles.uploadSub}>DOCX, TXT — max 50MB</span>
+                {referenceFile && (
+                  <button type="button" className={styles.clearFileBtn} onClick={e => { e.stopPropagation(); setReferenceFile(null); refFileRef.current.value = '' }}>✕ Remove</button>
+                )}
+              </div>
+              <input ref={refFileRef} type="file" accept=".docx,.doc,.txt,.md" style={{ display: 'none' }} onChange={handleReferenceFile} />
+              <textarea
+                className={`${styles.textarea} ${styles.textareaSmall}`}
+                rows={4}
+                placeholder='Or paste extracted text from your reference document here…'
+                value={referenceText}
+                onChange={e => setReferenceText(e.target.value)}
+              />
+            </section>
+          )}
+
+          {/* Corporate Template File — non-REWRITE modes */}
+          {agentMode !== 'REWRITE' && (
+            <section className={styles.section}>
+              <label className={styles.label}>Corporate DOCX Template <span className={styles.optional}>(optional)</span></label>
+              <p className={styles.hint}>Upload your branded DOCX template file. The AI will map content blocks to its styles.</p>
+              <div
+                className={`${styles.uploadZone} ${templateFile ? styles.uploadZoneActive : ''}`}
+                onClick={() => tplFileRef.current.click()}
+              >
+                <span className={styles.uploadIcon}>📝</span>
+                <span className={styles.uploadText}>{templateFile ? templateFile.name : 'Click to upload DOCX template'}</span>
+                <span className={styles.uploadSub}>DOCX only</span>
+                {templateFile && (
+                  <button type="button" className={styles.clearFileBtn} onClick={e => { e.stopPropagation(); setTemplateFile(null); tplFileRef.current.value = '' }}>✕ Remove</button>
+                )}
+              </div>
+              <input ref={tplFileRef} type="file" accept=".docx" style={{ display: 'none' }} onChange={handleTemplateFile} />
+            </section>
+          )}
 
           {/* Status */}
           {status && (
@@ -293,7 +349,11 @@ export default function Home() {
             className={styles.submitBtn}
             disabled={status?.type === 'loading'}
           >
-            {status?.type === 'loading' ? '⏳ Generating…' : '⚙️ Generate Document Content'}
+            {status?.type === 'loading'
+              ? '⏳ Processing…'
+              : agentMode === 'REWRITE'
+              ? '🔄 Rewrite Procedure as DOCX'
+              : '⚙️ Generate Document Content'}
           </button>
         </form>
 
