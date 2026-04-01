@@ -57,7 +57,7 @@ const SCOPE_EXAMPLES = [
   'Marine Spread Coordination Protocol',
 ]
 
-const N8N_WEBHOOK = 'https://zechy09.app.n8n.cloud/webhook/offshore-construction-ai'
+const API_ENDPOINT = '/api/generate'
 
 export default function Home() {
   const [agentMode, setAgentMode] = useState('PLANNER')
@@ -92,16 +92,17 @@ export default function Home() {
     setOutput(null)
 
     try {
-      const form = new FormData()
-      form.append('agent_mode', agentMode)
-      form.append('document_type', documentType)
-      form.append('scope', scope.trim())
-      form.append('template_rules', templateRules.trim() || 'none')
-      form.append('reference_text', referenceText.trim())
-      if (referenceFile) form.append('reference_file', referenceFile)
-      if (templateFile) form.append('template_file', templateFile)
-
-      const res = await fetch(N8N_WEBHOOK, { method: 'POST', body: form })
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_mode: agentMode,
+          document_type: documentType,
+          scope: scope.trim(),
+          template_rules: templateRules.trim() || 'none',
+          reference_text: referenceText.trim(),
+        }),
+      })
       if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
 
       const data = await res.json()
