@@ -1,0 +1,315 @@
+/* ─── Reset & Base ─────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.main {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0f1f33 0%, #1a3c5e 50%, #0f2a45 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px 60px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: 780px;
+}
+
+/* ─── Header ───────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 28px 32px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.headerIcon {
+  font-size: 48px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.6;
+}
+
+.standards {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #4aa8e8;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ─── Form Card ────────────────────────────────────────────── */
+.form {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 36px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+}
+
+/* ─── Section ──────────────────────────────────────────────── */
+.section {
+  margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #eef0f3;
+}
+.section:last-of-type { border-bottom: none; margin-bottom: 0; }
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a3c5e;
+  margin-bottom: 4px;
+  letter-spacing: 0.1px;
+}
+
+.optional {
+  font-weight: 400;
+  color: #999;
+  font-size: 12px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* ─── Agent Mode Grid ──────────────────────────────────────── */
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 540px) {
+  .modeGrid { grid-template-columns: 1fr; }
+}
+
+.modeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 2px solid #dde5ef;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+.modeCard:hover { border-color: #1a3c5e; background: #f5f8fc; }
+.modeCardActive { border-color: #1a3c5e; background: #eef3f9; }
+
+.modeIcon { font-size: 22px; }
+.modeLabel { font-size: 14px; font-weight: 700; color: #1a3c5e; }
+.modeDesc { font-size: 11px; color: #777; line-height: 1.4; }
+
+/* ─── Select ───────────────────────────────────────────────── */
+.select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #d0dce8;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: white;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231a3c5e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  transition: border-color 0.18s;
+}
+.select:focus { outline: none; border-color: #1a3c5e; }
+
+/* ─── Example Chips ────────────────────────────────────────── */
+.exampleChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chip {
+  background: #f0f4f8;
+  border: 1px solid #d0dce8;
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-size: 11px;
+  color: #4a6a85;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.chip:hover { background: #dde8f2; color: #1a3c5e; border-color: #1a3c5e; }
+
+/* ─── Textarea ─────────────────────────────────────────────── */
+.textarea {
+  width: 100%;
+  border: 1.5px solid #d0dce8;
+  border-radius: 8px;
+  padding: 11px 13px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #333;
+  resize: vertical;
+  min-height: 90px;
+  transition: border-color 0.18s;
+  line-height: 1.55;
+}
+.textarea:focus { outline: none; border-color: #1a3c5e; }
+.textareaSmall { margin-top: 10px; min-height: 80px; }
+
+/* ─── Upload Zone ──────────────────────────────────────────── */
+.uploadZone {
+  border: 2px dashed #c5d4e2;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: all 0.18s;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.uploadZone:hover { border-color: #1a3c5e; background: #eef3f9; }
+.uploadZoneActive { border-color: #16a34a; border-style: solid; background: #f0fdf4; }
+
+.uploadIcon { font-size: 28px; }
+.uploadText { font-size: 14px; font-weight: 600; color: #1a3c5e; }
+.uploadSub { font-size: 11px; color: #aaa; }
+
+.clearFileBtn {
+  margin-top: 4px;
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.clearFileBtn:hover { background: #fef2f2; }
+
+/* ─── Status Banner ────────────────────────────────────────── */
+.statusBanner {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status_loading { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.status_success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.status_error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+.spinner { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Submit Button ────────────────────────────────────────── */
+.submitBtn {
+  width: 100%;
+  background: #1a3c5e;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 8px;
+  letter-spacing: 0.2px;
+}
+.submitBtn:hover:not(:disabled) { background: #2c5f8a; }
+.submitBtn:active:not(:disabled) { transform: scale(0.99); }
+.submitBtn:disabled { background: #9ab0c4; cursor: not-allowed; }
+
+/* ─── Output ───────────────────────────────────────────────── */
+.outputSection {
+  margin-top: 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.outputHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #1a3c5e;
+}
+
+.outputTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.3px;
+}
+
+.copyBtn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.copyBtn:hover { background: rgba(255,255,255,0.25); }
+
+.outputPre {
+  padding: 24px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: #1a3c5e;
+  background: #f8fafc;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 600px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+/* ─── Footer ───────────────────────────────────────────────── */
+.footer {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
