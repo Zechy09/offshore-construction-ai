@@ -1,16 +1,3 @@
-import mammoth from 'mammoth'
-
-async function extractText(file) {
-  const buffer = Buffer.from(await file.arrayBuffer())
-  if ((file.name || '').toLowerCase().endsWith('.pdf')) {
-    const { default: pdfParse } = await import('pdf-parse')
-    const result = await pdfParse(buffer)
-    return result.text?.trim() || ''
-  }
-  const result = await mammoth.extractRawText({ buffer })
-  return result.value?.trim() || ''
-}
-
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
@@ -57,39 +44,27 @@ OUTPUT JSON SCHEMA:
 
 export async function POST(request) {
   try {
-    const formData = await request.formData()
-    const templateFile = formData.get('template_file')
-    const referenceFile = formData.get('reference_file')
-    const documentType = formData.get('document_type') || 'Offshore Construction Procedure'
-    const scope = formData.get('scope') || ''
-    const templateRules = formData.get('template_rules') || 'none'
+    const body = await request.json()
+    const { document_type, scope, template_rules, reference_text, template_text } = body
 
-    if (!referenceFile) {
-      return Response.json({ success: false, error: 'Reference procedure file is required.' }, { status: 400 })
-    }
+    const documentType  = document_type  || 'Offshore Construction Procedure'
+    const referenceText = reference_text || ''
+    const templateText  = template_text  || ''
+    const templateRules = template_rules || 'none'
 
-    // Extract text from reference procedure (DOCX or PDF)
-    const referenceText = await extractText(referenceFile)
     if (!referenceText || referenceText.length < 50) {
-      return Response.json({ success: false, error: 'Could not extract text from reference procedure. Ensure it is a valid DOCX or PDF file.' }, { status: 400 })
+      return Response.json({ success: false, error: 'Reference procedure text is required.' }, { status: 400 })
     }
 
-    // Extract text from template (if provided)
-    let templateText = ''
-    if (templateFile && templateFile.size > 0) {
-      templateText = await extractText(templateFile)
-    }
-
-    // Build prompt
     let userMessage = `TASK: Rewrite the reference procedure into the corporate template structure.
 DOCUMENT_TYPE: ${documentType}
 SCOPE: ${scope || 'Full procedure rewrite'}
 TEMPLATE_RULES: ${templateRules}`
 
     if (templateText) {
-      userMessage += `\n\nCORPORATE TEMPLATE STRUCTURE (extracted from uploaded template):\n${templateText.substring(0, 4000)}`
+      userMessage += `\n\nCORPORATE TEMPLATE STRUCTURE:\n${templateText.substring(0, 4000)}`
     } else {
-      userMessage += `\n\nCORPORATE TEMPLATE: No template uploaded — use standard offshore construction document structure with these sections: 1. Purpose and Scope, 2. References and Standards, 3. Roles and Responsibilities, 4. Equipment and Resources, 5. Risk Assessment, 6. Pre-Job Requirements, 7. Operational Procedure (step-by-step), 8. Emergency Procedures, 9. Post-Job Requirements, 10. Appendices`
+      userMessage += `\n\nCORPORATE TEMPLATE: No template provided — use standard offshore construction document structure: 1. Purpose and Scope, 2. References and Standards, 3. Roles and Responsibilities, 4. Equipment and Resources, 5. Risk Assessment, 6. Pre-Job Requirements, 7. Operational Procedure (step-by-step), 8. Emergency Procedures, 9. Post-Job Requirements, 10. Appendices`
     }
 
     userMessage += `\n\nREFERENCE PROCEDURE TO REWRITE:\n${referenceText.substring(0, 10000)}`
@@ -109,36 +84,32 @@ TEMPLATE_RULES: ${templateRules}`
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userMessage },
+          { role: 'user',   content: userMessage   },
         ],
       }),
     })
 
     if (!openaiRes.ok) {
-      const err = await openaiRes.json()
-      return Response.json({ success: false, error: err?.error?.message || 'OpenAI API error' }, { status: 502 })
+      const err = await openaiRes.json().catch(() => ({}))
+      return Response.json({ success: false, error: err?.error?.message || `OpenAI error ${openaiRes.status}` }, { status: 502 })
     }
 
-    const openaiData = await openaiRes.json()
-    const responseText = openaiData.choices?.[0]?.message?.content || '{}'
-
+    const openaiData  = await openaiRes.json()
+    const rawText     = openaiData.choices?.[0]?.message?.content || '{}'
     let parsedJson
-    try {
-      parsedJson = JSON.parse(responseText)
-    } catch {
-      parsedJson = { error: 'Could not parse AI response', raw: responseText }
-    }
+    try   { parsedJson = JSON.parse(rawText) }
+    catch { parsedJson = { error: 'Could not parse AI response', raw: rawText } }
 
     return Response.json({
       success: !parsedJson.error,
       data: parsedJson,
       meta: {
-        agentMode: 'REWRITE',
+        agentMode:       'REWRITE',
         documentType,
         scope,
-        generatedAt: new Date().toISOString(),
+        generatedAt:     new Date().toISOString(),
         referenceLength: referenceText.length,
-        templateUsed: !!templateText,
+        templateUsed:    !!templateText,
       },
     })
   } catch (err) {

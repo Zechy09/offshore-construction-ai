@@ -1,5 +1,3 @@
-import mammoth from 'mammoth'
-
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
@@ -44,32 +42,17 @@ OUTPUT JSON SCHEMA:
   ]
 }`
 
-async function extractText(file) {
-  const buffer = Buffer.from(await file.arrayBuffer())
-  if ((file.name || '').toLowerCase().endsWith('.pdf')) {
-    const { default: pdfParse } = await import('pdf-parse')
-    const result = await pdfParse(buffer)
-    return result.text?.trim() || ''
-  }
-  const result = await mammoth.extractRawText({ buffer })
-  return result.value?.trim() || ''
-}
-
 export async function POST(request) {
   try {
-    const formData = await request.formData()
-    const referenceFile = formData.get('reference_file')
-    const documentType  = formData.get('document_type')  || 'Offshore Construction Procedure'
-    const scope         = formData.get('scope')          || ''
-    const templateRules = formData.get('template_rules') || 'none'
+    const body = await request.json()
+    const { document_type, scope, template_rules, reference_text } = body
 
-    if (!referenceFile) {
-      return Response.json({ success: false, error: 'A reference document is required for style-matched generation.' }, { status: 400 })
-    }
+    const documentType  = document_type  || 'Offshore Construction Procedure'
+    const referenceText = reference_text || ''
+    const templateRules = template_rules || 'none'
 
-    const referenceText = await extractText(referenceFile)
     if (!referenceText || referenceText.length < 50) {
-      return Response.json({ success: false, error: 'Could not extract readable text from the reference document.' }, { status: 400 })
+      return Response.json({ success: false, error: 'A reference document is required for style-matched generation.' }, { status: 400 })
     }
 
     const wordCount = referenceText.trim().split(/\s+/).length

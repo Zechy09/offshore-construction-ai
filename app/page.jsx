@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import styles from './page.module.css'
 import { buildDocx } from './lib/buildDocx'
+import { extractFileText } from './lib/extractFileText'
 
 async function safeJson(res) {
   const text = await res.text()
@@ -99,57 +100,64 @@ export default function Home() {
     setGenProgress(5)
 
     try {
+      // ── Stage 1: extract text from uploaded files in the browser ──────────
+      // Sends plain text to the server instead of raw binary, keeping all
+      // payloads well under Vercel's 4.5 MB serverless function limit.
       setGenerationStage('extracting')
-      setGenProgress(20)
+      setGenProgress(15)
 
-      // Extract text from uploaded file (DOCX or PDF) for WRITER mode
-      let effectiveReferenceText = referenceText
-      if (agentMode === 'WRITER' && referenceFile) {
-        const extractForm = new FormData()
-        extractForm.append('file', referenceFile)
-        const extractRes = await fetch('/api/extract', { method: 'POST', body: extractForm })
-        const extractData = await safeJson(extractRes)
-        if (extractData.success && extractData.text) {
-          effectiveReferenceText = extractData.text
-        }
+      let extractedRefText   = referenceText
+      let extractedTplText   = ''
+
+      if (referenceFile) {
+        extractedRefText = await extractFileText(referenceFile)
       }
+      setGenProgress(30)
+      if (templateFile) {
+        extractedTplText = await extractFileText(templateFile)
+      }
+      setGenProgress(40)
+
+      // ── Stage 2: call the appropriate API with extracted text ─────────────
+      setGenerationStage('generating')
+      setGenProgress(45)
 
       let result
-      if (agentMode === 'REWRITE' && referenceFile) {
-        const form = new FormData()
-        form.append('document_type', documentType)
-        form.append('scope', scope.trim() || 'Full procedure rewrite')
-        form.append('template_rules', templateRules.trim() || 'none')
-        form.append('reference_file', referenceFile)
-        if (templateFile) form.append('template_file', templateFile)
-
-        setGenerationStage('generating')
-        setGenProgress(40)
-        const res = await fetch('/api/rewrite', { method: 'POST', body: form })
+      if (agentMode === 'REWRITE') {
+        const res = await fetch('/api/rewrite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            document_type:   documentType,
+            scope:           scope.trim() || 'Full procedure rewrite',
+            template_rules:  templateRules.trim() || 'none',
+            reference_text:  extractedRefText,
+            template_text:   extractedTplText,
+          }),
+        })
         result = await safeJson(res)
-      } else if (agentMode === 'GENERATE' && referenceFile) {
-        const form = new FormData()
-        form.append('document_type', documentType)
-        form.append('scope', scope.trim() || 'Full procedure')
-        form.append('template_rules', templateRules.trim() || 'none')
-        form.append('reference_file', referenceFile)
-
-        setGenerationStage('generating')
-        setGenProgress(40)
-        const res = await fetch('/api/generate-procedure', { method: 'POST', body: form })
+      } else if (agentMode === 'GENERATE') {
+        const res = await fetch('/api/generate-procedure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            document_type:  documentType,
+            scope:          scope.trim() || 'Full procedure',
+            template_rules: templateRules.trim() || 'none',
+            reference_text: extractedRefText,
+          }),
+        })
         result = await safeJson(res)
       } else {
-        setGenerationStage('generating')
-        setGenProgress(40)
         const res = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            agent_mode: agentMode === 'GENERATE' ? 'WRITER' : agentMode,
-            document_type: documentType,
-            scope: scope.trim() || 'Full document',
+            agent_mode:     agentMode,
+            document_type:  documentType,
+            scope:          scope.trim() || 'Full document',
             template_rules: templateRules.trim() || 'none',
-            reference_text: effectiveReferenceText.trim(),
+            reference_text: extractedRefText.trim(),
           }),
         })
         result = await safeJson(res)
