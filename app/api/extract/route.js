@@ -1,5 +1,4 @@
 import mammoth from 'mammoth'
-import pdfParse from 'pdf-parse'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -17,6 +16,8 @@ export async function POST(request) {
 
     let text = ''
     if (name.endsWith('.pdf')) {
+      // Dynamic import avoids pdf-parse's module-load side effects in serverless
+      const { default: pdfParse } = await import('pdf-parse')
       const result = await pdfParse(buffer)
       text = result.text?.trim() || ''
     } else {

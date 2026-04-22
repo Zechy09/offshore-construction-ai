@@ -3,6 +3,13 @@ import { useState, useRef } from 'react'
 import styles from './page.module.css'
 import { buildDocx } from './lib/buildDocx'
 
+async function safeJson(res) {
+  const text = await res.text()
+  if (!text) throw new Error(`Server returned an empty response (HTTP ${res.status}). Check that all environment variables are set.`)
+  try { return JSON.parse(text) }
+  catch { throw new Error(`Server returned invalid JSON (HTTP ${res.status}): ${text.slice(0, 120)}`) }
+}
+
 const PROCEDURE_TYPES = [
   { id: 'Lift Plan',                      label: 'Lift Plan',                      icon: '🏗️' },
   { id: 'Method Statement',               label: 'Method Statement',               icon: '📋' },
@@ -101,7 +108,7 @@ export default function Home() {
         const extractForm = new FormData()
         extractForm.append('file', referenceFile)
         const extractRes = await fetch('/api/extract', { method: 'POST', body: extractForm })
-        const extractData = await extractRes.json()
+        const extractData = await safeJson(extractRes)
         if (extractData.success && extractData.text) {
           effectiveReferenceText = extractData.text
         }
@@ -119,8 +126,7 @@ export default function Home() {
         setGenerationStage('generating')
         setGenProgress(40)
         const res = await fetch('/api/rewrite', { method: 'POST', body: form })
-        if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
-        result = await res.json()
+        result = await safeJson(res)
       } else {
         setGenerationStage('generating')
         setGenProgress(40)
@@ -135,8 +141,7 @@ export default function Home() {
             reference_text: effectiveReferenceText.trim(),
           }),
         })
-        if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
-        result = await res.json()
+        result = await safeJson(res)
       }
 
       if (!result.success) throw new Error(result.error || 'AI generation failed')

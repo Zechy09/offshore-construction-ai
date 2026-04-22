@@ -1,9 +1,9 @@
 import mammoth from 'mammoth'
-import pdfParse from 'pdf-parse'
 
 async function extractText(file) {
   const buffer = Buffer.from(await file.arrayBuffer())
   if ((file.name || '').toLowerCase().endsWith('.pdf')) {
+    const { default: pdfParse } = await import('pdf-parse')
     const result = await pdfParse(buffer)
     return result.text?.trim() || ''
   }
