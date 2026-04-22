@@ -95,6 +95,18 @@ export default function Home() {
       setGenerationStage('extracting')
       setGenProgress(20)
 
+      // Extract text from uploaded file (DOCX or PDF) for non-REWRITE modes
+      let effectiveReferenceText = referenceText
+      if (agentMode !== 'REWRITE' && referenceFile) {
+        const extractForm = new FormData()
+        extractForm.append('file', referenceFile)
+        const extractRes = await fetch('/api/extract', { method: 'POST', body: extractForm })
+        const extractData = await extractRes.json()
+        if (extractData.success && extractData.text) {
+          effectiveReferenceText = extractData.text
+        }
+      }
+
       let result
       if (agentMode === 'REWRITE' && referenceFile) {
         const form = new FormData()
@@ -120,7 +132,7 @@ export default function Home() {
             document_type: documentType,
             scope: scope.trim() || 'Full document',
             template_rules: templateRules.trim() || 'none',
-            reference_text: referenceText.trim(),
+            reference_text: effectiveReferenceText.trim(),
           }),
         })
         if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`)
@@ -250,14 +262,14 @@ export default function Home() {
                   >
                     <span className={styles.dropIcon}>📄</span>
                     <span className={styles.dropText}>{referenceFile ? referenceFile.name : 'Click to upload'}</span>
-                    <span className={styles.dropSub}>DOCX, TXT — max 50MB</span>
+                    <span className={styles.dropSub}>DOCX, PDF, TXT — max 50MB</span>
                     {referenceFile && (
                       <button type="button" className={styles.removeBtn} onClick={e => { e.stopPropagation(); setReferenceFile(null); refFileRef.current.value = '' }}>
                         ✕ Remove
                       </button>
                     )}
                   </div>
-                  <input ref={refFileRef} type="file" accept=".docx,.doc,.txt" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) setReferenceFile(f) }} />
+                  <input ref={refFileRef} type="file" accept=".docx,.doc,.pdf,.txt" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) setReferenceFile(f) }} />
                 </div>
 
                 <div>

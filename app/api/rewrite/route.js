@@ -1,4 +1,15 @@
 import mammoth from 'mammoth'
+import pdfParse from 'pdf-parse'
+
+async function extractText(file) {
+  const buffer = Buffer.from(await file.arrayBuffer())
+  if ((file.name || '').toLowerCase().endsWith('.pdf')) {
+    const result = await pdfParse(buffer)
+    return result.text?.trim() || ''
+  }
+  const result = await mammoth.extractRawText({ buffer })
+  return result.value?.trim() || ''
+}
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -57,20 +68,16 @@ export async function POST(request) {
       return Response.json({ success: false, error: 'Reference procedure file is required.' }, { status: 400 })
     }
 
-    // Extract text from reference procedure
-    const refBuffer = Buffer.from(await referenceFile.arrayBuffer())
-    const refResult = await mammoth.extractRawText({ buffer: refBuffer })
-    const referenceText = refResult.value?.trim()
+    // Extract text from reference procedure (DOCX or PDF)
+    const referenceText = await extractText(referenceFile)
     if (!referenceText || referenceText.length < 50) {
-      return Response.json({ success: false, error: 'Could not extract text from reference procedure. Ensure it is a valid DOCX file.' }, { status: 400 })
+      return Response.json({ success: false, error: 'Could not extract text from reference procedure. Ensure it is a valid DOCX or PDF file.' }, { status: 400 })
     }
 
     // Extract text from template (if provided)
     let templateText = ''
     if (templateFile && templateFile.size > 0) {
-      const tplBuffer = Buffer.from(await templateFile.arrayBuffer())
-      const tplResult = await mammoth.extractRawText({ buffer: tplBuffer })
-      templateText = tplResult.value?.trim() || ''
+      templateText = await extractText(templateFile)
     }
 
     // Build prompt
