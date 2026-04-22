@@ -71,7 +71,7 @@ export default function Home() {
 
   function canAdvance() {
     if (currentStep === 2) return !!documentType
-    if (currentStep === 3) return agentMode !== 'REWRITE' || !!referenceFile
+    if (currentStep === 3) return (agentMode !== 'REWRITE' && agentMode !== 'GENERATE') || !!referenceFile
     return true
   }
 
@@ -102,9 +102,9 @@ export default function Home() {
       setGenerationStage('extracting')
       setGenProgress(20)
 
-      // Extract text from uploaded file (DOCX or PDF) for non-REWRITE modes
+      // Extract text from uploaded file (DOCX or PDF) for WRITER mode
       let effectiveReferenceText = referenceText
-      if (agentMode !== 'REWRITE' && referenceFile) {
+      if (agentMode === 'WRITER' && referenceFile) {
         const extractForm = new FormData()
         extractForm.append('file', referenceFile)
         const extractRes = await fetch('/api/extract', { method: 'POST', body: extractForm })
@@ -127,6 +127,17 @@ export default function Home() {
         setGenProgress(40)
         const res = await fetch('/api/rewrite', { method: 'POST', body: form })
         result = await safeJson(res)
+      } else if (agentMode === 'GENERATE' && referenceFile) {
+        const form = new FormData()
+        form.append('document_type', documentType)
+        form.append('scope', scope.trim() || 'Full procedure')
+        form.append('template_rules', templateRules.trim() || 'none')
+        form.append('reference_file', referenceFile)
+
+        setGenerationStage('generating')
+        setGenProgress(40)
+        const res = await fetch('/api/generate-procedure', { method: 'POST', body: form })
+        result = await safeJson(res)
       } else {
         setGenerationStage('generating')
         setGenProgress(40)
@@ -134,7 +145,7 @@ export default function Home() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            agent_mode: agentMode,
+            agent_mode: agentMode === 'GENERATE' ? 'WRITER' : agentMode,
             document_type: documentType,
             scope: scope.trim() || 'Full document',
             template_rules: templateRules.trim() || 'none',
@@ -381,11 +392,24 @@ export default function Home() {
                   <span className={styles.modeTitle}>Context Only</span>
                   <span className={styles.modeDesc}>Use reference as context to generate fresh, comprehensive procedure content.</span>
                 </button>
+
+                <button
+                  type="button"
+                  className={`${styles.modeCard} ${styles.modeCardWide} ${agentMode === 'GENERATE' ? styles.modeCardActive : ''} ${!referenceFile ? styles.modeCardDisabled : ''}`}
+                  onClick={() => referenceFile && setAgentMode('GENERATE')}
+                >
+                  <span className={styles.modeIcon}>📋</span>
+                  <span className={styles.modeTitle}>Generate Procedure</span>
+                  <span className={styles.modeDesc}>
+                    Analyse the reference document and generate a complete new procedure that matches its formatting style, level of detail, and approximate length — section for section.
+                  </span>
+                  {!referenceFile && <span className={styles.modeRequires}>Requires a reference file in Step 1</span>}
+                </button>
               </div>
 
-              {agentMode === 'REWRITE' && !referenceFile && (
+              {(agentMode === 'REWRITE' || agentMode === 'GENERATE') && !referenceFile && (
                 <div className={styles.modeWarning}>
-                  Mirror Structure requires a reference procedure DOCX. Go back to Step 1 to upload one, or select Context Only.
+                  This mode requires a reference procedure file. Go back to Step 1 to upload one.
                 </div>
               )}
             </div>
@@ -396,7 +420,7 @@ export default function Home() {
             <div className={styles.stepContent}>
               <h2 className={styles.stepTitle}>Generating Procedure</h2>
               <p className={styles.stepDesc}>
-                {documentType} &nbsp;·&nbsp; {agentMode === 'REWRITE' ? 'Mirror Structure' : 'Context Only'}
+                {documentType} &nbsp;·&nbsp; {agentMode === 'REWRITE' ? 'Mirror Structure' : agentMode === 'GENERATE' ? 'Generate Procedure' : 'Context Only'}
                 {scope ? ` · ${scope}` : ''}
               </p>
 

@@ -306,6 +306,16 @@
   .modeGrid { grid-template-columns: 1fr; }
 }
 
+.modeCardWide {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+.modeCardWide .modeIcon { font-size: 32px; flex-shrink: 0; margin-top: 2px; }
+.modeCardWide .modeTitle { font-size: 16px; }
+.modeCardWide .modeDesc { font-size: 13px; }
+
 .modeCard {
   display: flex;
   flex-direction: column;
